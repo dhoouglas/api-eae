@@ -3,9 +3,12 @@ import {
   getEventsService,
   createEventService,
   CreateEventInput,
+  getEventByIdService,
+  updateEventService,
+  deleteEventService,
+  UpdateEventInput,
 } from "./event.service";
 
-// --- Controller para Listar Eventos ---
 export async function getEventsHandler(
   request: FastifyRequest,
   reply: FastifyReply
@@ -19,14 +22,24 @@ export async function getEventsHandler(
   }
 }
 
-// --- Controller para Criar um Evento ---
+export async function getEventByIdHandler(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  try {
+    const event = await getEventByIdService(request.params.id);
+    return reply.send({ event });
+  } catch (error) {
+    return reply.status(404).send({ error: "Evento não encontrado." });
+  }
+}
+
 export async function createEventHandler(
   request: FastifyRequest<{ Body: CreateEventInput }>,
   reply: FastifyReply
 ) {
   const auth = (request as any).auth;
 
-  // 1. O Controller faz a verificação de AUTENTICAÇÃO e AUTORIZAÇÃO
   if (!auth || !auth.userId) {
     return reply.status(401).send({ error: "Não autorizado." });
   }
@@ -37,15 +50,62 @@ export async function createEventHandler(
       .send({ error: "Acesso negado. Apenas administradores." });
   }
 
-  // 2. Ele chama o serviço para executar a lógica de negócio
   try {
     const event = await createEventService(request.body);
     return reply.status(201).send({ event });
   } catch (error) {
-    // Se o Zod no serviço falhar, o erro é capturado aqui
     console.error("Erro ao criar evento:", error);
     return reply
       .status(400)
       .send({ error: "Dados inválidos ou erro ao criar evento." });
+  }
+}
+
+export async function updateEventHandler(
+  request: FastifyRequest<{ Body: UpdateEventInput; Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  const auth = (request as any).auth;
+  if (
+    !auth ||
+    !auth.userId ||
+    auth.sessionClaims?.public_metadata?.role !== "admin"
+  ) {
+    return reply
+      .status(403)
+      .send({ error: "Acesso negado. Apenas administradores." });
+  }
+
+  try {
+    const event = await updateEventService(request.params.id, request.body);
+    return reply.send({ event });
+  } catch (error) {
+    console.error("Erro ao atualizar evento:", error);
+    return reply
+      .status(400)
+      .send({ error: "Não foi possível atualizar o evento." });
+  }
+}
+
+export async function deleteEventHandler(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  const auth = (request as any).auth;
+  if (
+    !auth ||
+    !auth.userId ||
+    auth.sessionClaims?.public_metadata?.role !== "admin"
+  ) {
+    return reply
+      .status(403)
+      .send({ error: "Acesso negado. Apenas administradores." });
+  }
+
+  try {
+    await deleteEventService(request.params.id);
+    return reply.status(204).send();
+  } catch (error) {
+    return reply.status(404).send({ error: "Evento não encontrado." });
   }
 }

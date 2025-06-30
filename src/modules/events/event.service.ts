@@ -1,7 +1,6 @@
 import { prisma } from "../../server";
 import { z } from "zod";
 
-// 1. O esquema de validação (Zod) vive aqui, perto da lógica de negócio.
 const createEventSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
   description: z.string().min(1, "Descrição é obrigatória"),
@@ -10,10 +9,11 @@ const createEventSchema = z.object({
   imageUrl: z.string().url().optional(),
 });
 
-// Exportamos o tipo para que o Controller saiba o formato dos dados
-export type CreateEventInput = z.infer<typeof createEventSchema>;
+const updateEventSchema = createEventSchema.partial();
 
-// --- Serviço para Listar Eventos ---
+export type CreateEventInput = z.infer<typeof createEventSchema>;
+export type UpdateEventInput = z.infer<typeof updateEventSchema>;
+
 export async function getEventsService() {
   const events = await prisma.event.findMany({
     orderBy: {
@@ -23,17 +23,40 @@ export async function getEventsService() {
   return events;
 }
 
-// --- Serviço para Criar um Evento ---
+export async function getEventByIdService(id: string) {
+  const event = await prisma.event.findUniqueOrThrow({
+    where: { id },
+  });
+  return event;
+}
+
 export async function createEventService(input: CreateEventInput) {
-  // A validação dos dados acontece aqui dentro do serviço
   const data = createEventSchema.parse(input);
 
   const event = await prisma.event.create({
     data: {
       ...data,
-      date: new Date(data.date), // Convertemos a string da data para um objeto Date
+      date: new Date(data.date),
     },
   });
 
   return event;
+}
+
+export async function updateEventService(id: string, input: UpdateEventInput) {
+  const data = updateEventSchema.parse(input);
+  const event = await prisma.event.update({
+    where: { id },
+    data: {
+      ...data,
+      ...(data.date && { date: new Date(data.date) }),
+    },
+  });
+  return event;
+}
+
+export async function deleteEventService(id: string) {
+  await prisma.event.delete({
+    where: { id },
+  });
 }
