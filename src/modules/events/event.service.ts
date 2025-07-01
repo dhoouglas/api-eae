@@ -17,7 +17,7 @@ export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 export async function getEventsService() {
   const events = await prisma.event.findMany({
     orderBy: {
-      date: "asc",
+      createdAt: "desc",
     },
   });
   return events;
