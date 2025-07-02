@@ -6,6 +6,8 @@ import {
   getEventByIdHandler,
   updateEventHandler,
   deleteEventHandler,
+  rsvpEventHandler,
+  getMyAttendanceStatusHandler,
 } from "./event.controller";
 
 export async function eventRoutes(app: FastifyInstance) {
@@ -18,4 +20,8 @@ export async function eventRoutes(app: FastifyInstance) {
   app.put("/:id", updateEventHandler);
 
   app.delete("/:id", deleteEventHandler);
+
+  app.post("/:eventId/rsvp", rsvpEventHandler);
+
+  app.get("/:eventId/attendance/me", getMyAttendanceStatusHandler);
 }
