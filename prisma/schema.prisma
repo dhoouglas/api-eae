@@ -9,17 +9,39 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model User {
+  id        String   @id @default(uuid())
+  clerkId   String   @unique
+  // ...
+  attendances EventAttendance[]
+}
+
 model Event {
   id          String   @id @default(uuid())
   title       String
   description String
   date        DateTime
   location    String
-  imageUrl    String?  // O '?' torna o campo opcional
+  imageUrl    String?  
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Mapeia o nome do modelo 'Event' para a tabela 'events' no banco
+  attendees   EventAttendance[]
+
   @@map("events")
+}
+
+model EventAttendance {
+  userId    String
+  eventId   String
+  status    String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, eventId])
+  @@map("event_attendances")
 }
