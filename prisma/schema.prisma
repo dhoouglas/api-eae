@@ -45,3 +45,16 @@ model EventAttendance {
   @@id([userId, eventId])
   @@map("event_attendances")
 }
+
+model NewsPost {
+  id        String   @id @default(uuid())
+  title     String
+  content   String   @db.Text // @db.Text é ideal para textos mais longos
+  category  String   // Ex: "CONSERVAÇÃO", "EDUCAÇÃO", "EVENTO"
+  imageUrl  String?  // A imagem da notícia será opcional
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("news_posts")
+}
