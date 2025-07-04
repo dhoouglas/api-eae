@@ -3,6 +3,7 @@ import fastify from "fastify";
 import { PrismaClient } from "@prisma/client";
 import { eventRoutes } from "./modules/events/event.routes";
 import { clerkPlugin } from "@clerk/fastify";
+import { newsRoutes } from "./modules/news/news.routes";
 
 const app = fastify();
 export const prisma = new PrismaClient();
@@ -18,6 +19,10 @@ app.register(clerkPlugin, {
 
 app.register(eventRoutes, {
   prefix: "/events",
+});
+
+app.register(newsRoutes, {
+  prefix: "/news",
 });
 
 async function start() {

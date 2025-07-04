@@ -11,6 +11,7 @@ import {
 } from "./event.controller";
 
 export async function eventRoutes(app: FastifyInstance) {
+  // rotas eventos
   app.get("/", getEventsHandler);
 
   app.get("/:id", getEventByIdHandler);
@@ -21,6 +22,7 @@ export async function eventRoutes(app: FastifyInstance) {
 
   app.delete("/:id", deleteEventHandler);
 
+  // rota para confirmar presença
   app.post("/:eventId/rsvp", rsvpEventHandler);
 
   app.get("/:eventId/attendance/me", getMyAttendanceStatusHandler);
