@@ -6,7 +6,12 @@ const createNewsPostSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
   content: z.string().min(1, "Conteúdo é obrigatório"),
   category: z.string().min(1, "Categoria é obrigatória"),
-  imageUrl: z.string().url("URL da imagem inválida").optional(),
+  // imageUrl: z.string().url("URL da imagem inválida").optional(),
+  imageUrl: z
+    .string()
+    .url({ message: "URL da imagem inválida." })
+    .nullable()
+    .optional(),
 });
 
 const updateNewsPostSchema = createNewsPostSchema.partial();
@@ -14,6 +19,7 @@ const updateNewsPostSchema = createNewsPostSchema.partial();
 export type CreateNewsInput = z.infer<typeof createNewsPostSchema>;
 export type UpdateNewsInput = z.infer<typeof updateNewsPostSchema>;
 
+// GET
 export async function getLatestNewsService() {
   const newsPosts = await prisma.newsPost.findMany({
     orderBy: {
@@ -24,8 +30,8 @@ export async function getLatestNewsService() {
   return newsPosts;
 }
 
+// GET BY ID
 export async function getNewsPostByIdService(id: string) {
-  // findUniqueOrThrow já lida com o caso de "não encontrado"
   const newsPost = await prisma.newsPost.findUniqueOrThrow({
     where: { id },
   });
@@ -34,7 +40,6 @@ export async function getNewsPostByIdService(id: string) {
 
 // POST
 export async function createNewsPostService(input: CreateNewsInput) {
-  // Valida os dados de entrada antes de criar
   const data = createNewsPostSchema.parse(input);
   return await prisma.newsPost.create({
     data,
