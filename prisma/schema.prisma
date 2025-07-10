@@ -58,3 +58,33 @@ model NewsPost {
 
   @@map("news_posts")
 }
+
+model Fauna {
+  id        String   @id @default(uuid())
+  name      String
+  scientificName String
+  description String @db.Text
+  habitat   String
+  conservationStatus String
+  imageUrls  String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("faunas")
+}
+
+model Flora {
+  id        String   @id @default(uuid())
+  name      String
+  scientificName String
+  description String @db.Text
+  family    String
+  conservationStatus String
+  imageUrls  String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("floras")
+}
