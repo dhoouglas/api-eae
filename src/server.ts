@@ -4,6 +4,8 @@ import { PrismaClient } from "@prisma/client";
 import { eventRoutes } from "./modules/events/event.routes";
 import { clerkPlugin } from "@clerk/fastify";
 import { newsRoutes } from "./modules/news/news.routes";
+import { faunaRoutes } from "./modules/fauna/fauna.routes";
+import { floraRoutes } from "./modules/flora/flora.routes";
 import { uploadRoutes } from "./modules/upload/upload.routes";
 import multipart from "@fastify/multipart";
 
@@ -35,6 +37,14 @@ app.register(newsRoutes, {
 });
 
 app.register(uploadRoutes, { prefix: "/upload" });
+
+app.register(faunaRoutes, {
+  prefix: "/fauna",
+});
+
+app.register(floraRoutes, {
+  prefix: "/flora",
+});
 
 async function start() {
   try {
