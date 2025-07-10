@@ -29,13 +29,25 @@ export async function uploadFileToR2(
     ContentType: contentType,
   });
 
-  await S3.send(command);
+  try {
+    console.log(
+      `[UPLOAD SERVIÇO] - Enviando comando para o S3/R2. Bucket: ${bucketName}, Key: ${fileName}`
+    );
+    await S3.send(command);
+    console.log("[UPLOAD SERVIÇO] - Comando S3 executado com sucesso.");
 
-  if (!publicUrlBase) {
-    throw new Error("A URL pública do R2 não está configurada no .env");
+    if (!publicUrlBase) {
+      throw new Error("A URL pública do R2 não está configurada no .env");
+    }
+
+    const publicUrl = `${publicUrlBase}/${fileName}`;
+
+    return publicUrl;
+  } catch (error) {
+    console.error(
+      "[UPLOAD SERVIÇO] - Erro ao enviar o arquivo para o R2:",
+      error
+    );
+    throw error;
   }
-
-  const publicUrl = `${publicUrlBase}/${fileName}`;
-
-  return publicUrl;
 }
