@@ -78,6 +78,53 @@ export async function getAttendanceStatusService(
   return attendance;
 }
 
+export async function getEventsSummaryService() {
+  const events = await prisma.event.findMany({
+    select: {
+      id: true,
+      title: true,
+    },
+  });
+
+  const summary = await Promise.all(
+    events.map(async (event) => {
+      const rsvps = await prisma.eventAttendance.groupBy({
+        by: ["status"],
+        where: {
+          eventId: event.id,
+        },
+        _count: {
+          status: true,
+        },
+      });
+
+      const counts = {
+        going: 0,
+        notGoing: 0,
+        maybe: 0,
+      };
+
+      rsvps.forEach((rsvp) => {
+        if (rsvp.status === "CONFIRMED") {
+          counts.going = rsvp._count.status;
+        } else if (rsvp.status === "DECLINED") {
+          counts.notGoing = rsvp._count.status;
+        } else if (rsvp.status === "MAYBE") {
+          counts.maybe = rsvp._count.status;
+        }
+      });
+
+      return {
+        id: event.id,
+        name: event.title,
+        rsvps: counts,
+      };
+    })
+  );
+
+  return summary;
+}
+
 export async function upsertAttendanceService({
   userId,
   eventId,

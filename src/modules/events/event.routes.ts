@@ -8,10 +8,13 @@ import {
   deleteEventHandler,
   rsvpEventHandler,
   getMyAttendanceStatusHandler,
+  getEventsSummaryHandler,
 } from "./event.controller";
 
 export async function eventRoutes(app: FastifyInstance) {
   // rotas eventos
+  app.get("/summary", getEventsSummaryHandler);
+
   app.get("/", getEventsHandler);
 
   app.get("/:id", getEventByIdHandler);

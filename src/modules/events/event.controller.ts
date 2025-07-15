@@ -10,8 +10,28 @@ import {
   upsertAttendanceService,
   RsvpInput,
   getAttendanceStatusService,
+  getEventsSummaryService,
 } from "./event.service";
 import { findOrCreateUserService } from "../users/user.service";
+
+export async function getEventsSummaryHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  if ((request as any).auth?.sessionClaims?.public_metadata?.role !== "admin") {
+    return reply.status(403).send({ error: "Acesso negado." });
+  }
+
+  try {
+    const summary = await getEventsSummaryService();
+    return reply.send(summary);
+  } catch (error) {
+    console.error("Erro ao buscar resumo de eventos:", error);
+    return reply
+      .status(500)
+      .send({ error: "Erro ao buscar resumo de eventos." });
+  }
+}
 
 export async function getEventsHandler(
   request: FastifyRequest,
