@@ -12,6 +12,12 @@ datasource db {
 model User {
   id        String   @id @default(uuid())
   clerkId   String   @unique
+  
+  pushToken String?  @unique
+  notifyOnNewEvents      Boolean  @default(true)
+  notifyOnEventReminders Boolean  @default(true)
+  notifyOnNews           Boolean  @default(true)
+
   // ...
   attendances EventAttendance[]
 }
