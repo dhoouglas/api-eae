@@ -55,8 +55,9 @@ app.register(notificationRoutes, {
 
 async function start() {
   try {
-    await app.listen({ port: 3333, host: "0.0.0.0" });
-    console.log("🚀 Servidor HTTP rodando em http://localhost:3333");
+    const port = Number(process.env.PORT) || 3333;
+    await app.listen({ port, host: "0.0.0.0" });
+    console.log(`🚀 Servidor HTTP rodando em http://localhost:${port}`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
