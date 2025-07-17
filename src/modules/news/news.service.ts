@@ -1,3 +1,4 @@
+import { pushNotificationService } from "../notifications/push-notification.service";
 import { prisma } from "../../server";
 
 import { z } from "zod";
@@ -41,9 +42,31 @@ export async function getNewsPostByIdService(id: string) {
 // POST
 export async function createNewsPostService(input: CreateNewsInput) {
   const data = createNewsPostSchema.parse(input);
-  return await prisma.newsPost.create({
+  const newPost = await prisma.newsPost.create({
     data,
   });
+
+  // Enviar notificação para usuários interessados
+  const usersToNotify = await prisma.user.findMany({
+    where: {
+      notifyOnNews: true,
+      pushToken: {
+        not: null,
+      },
+    },
+  });
+
+  for (const user of usersToNotify) {
+    if (user.pushToken) {
+      pushNotificationService.sendPushNotification(
+        user.pushToken,
+        "Nova Notícia!",
+        newPost.title
+      );
+    }
+  }
+
+  return newPost;
 }
 
 // PUT

@@ -1,3 +1,4 @@
+import { pushNotificationService } from "../notifications/push-notification.service";
 import { prisma } from "../../server";
 import { z } from "zod";
 
@@ -43,9 +44,31 @@ export async function getEventByIdService(id: string) {
 
 export async function createEventService(input: CreateEventInput) {
   const data = createEventSchema.parse(input);
-  return await prisma.event.create({
+  const newEvent = await prisma.event.create({
     data: { ...data, date: new Date(data.date) },
   });
+
+  // Enviar notificação para usuários interessados
+  const usersToNotify = await prisma.user.findMany({
+    where: {
+      notifyOnNewEvents: true,
+      pushToken: {
+        not: null,
+      },
+    },
+  });
+
+  for (const user of usersToNotify) {
+    if (user.pushToken) {
+      pushNotificationService.sendPushNotification(
+        user.pushToken,
+        "Novo Evento!",
+        `Não perca: ${newEvent.title}`
+      );
+    }
+  }
+
+  return newEvent;
 }
 
 export async function updateEventService(id: string, input: UpdateEventInput) {

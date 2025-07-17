@@ -7,8 +7,10 @@ import { clerkPlugin } from "@clerk/fastify";
 import { newsRoutes } from "./modules/news/news.routes";
 import { faunaRoutes } from "./modules/fauna/fauna.routes";
 import { floraRoutes } from "./modules/flora/flora.routes";
+import { notificationRoutes } from "./modules/notifications/notification.routes";
 import { uploadRoutes } from "./modules/upload/upload.routes";
 import multipart from "@fastify/multipart";
+import "./cron";
 
 const app = fastify();
 
@@ -45,6 +47,10 @@ app.register(faunaRoutes, {
 
 app.register(floraRoutes, {
   prefix: "/flora",
+});
+
+app.register(notificationRoutes, {
+  prefix: "/notifications",
 });
 
 async function start() {
