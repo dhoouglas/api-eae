@@ -7,6 +7,9 @@ import { clerkPlugin } from "@clerk/fastify";
 import { newsRoutes } from "./modules/news/news.routes";
 import { faunaRoutes } from "./modules/fauna/fauna.routes";
 import { floraRoutes } from "./modules/flora/flora.routes";
+import { trailRoutes } from "./modules/trails/trail.routes";
+import { trailCoordinateRoutes } from "./modules/trail-coordinates/trail-coordinate.routes";
+import { trailWaypointRoutes } from "./modules/trail-waypoints/trail-waypoint.routes";
 import { notificationRoutes } from "./modules/notifications/notification.routes";
 import { uploadRoutes } from "./modules/upload/upload.routes";
 import multipart from "@fastify/multipart";
@@ -48,6 +51,14 @@ app.register(faunaRoutes, {
 app.register(floraRoutes, {
   prefix: "/flora",
 });
+
+app.register(trailRoutes, {
+  prefix: "/trails",
+});
+
+app.register(trailCoordinateRoutes);
+
+app.register(trailWaypointRoutes);
 
 app.register(notificationRoutes, {
   prefix: "/notifications",
