@@ -1,3 +1,4 @@
+import { deleteMultipleFilesFromR2 } from "../upload/upload.service";
 import { prisma } from "../../server";
 
 class FloraService {
@@ -57,8 +58,41 @@ class FloraService {
   }
 
   async remove(id: string) {
-    await prisma.flora.delete({
-      where: { id },
+    return prisma.$transaction(async (tx) => {
+      // 1. Buscar o registro da flora para obter as URLs das imagens
+      const floraToDelete = await tx.flora.findUnique({
+        where: { id },
+      });
+
+      if (!floraToDelete) {
+        throw new Error(`Registro de flora com ID ${id} não encontrado.`);
+      }
+
+      // 2. Se houver imagens, deletá-las do R2
+      if (floraToDelete.imageUrls && floraToDelete.imageUrls.length > 0) {
+        const publicUrlBase = process.env.R2_PUBLIC_URL;
+        if (!publicUrlBase) {
+          throw new Error("A URL pública do R2 não está configurada no .env");
+        }
+
+        const fileKeys = floraToDelete.imageUrls.map((url) =>
+          url.replace(`${publicUrlBase}/`, "")
+        );
+
+        try {
+          await deleteMultipleFilesFromR2(fileKeys);
+        } catch (error) {
+          console.error(`Erro ao deletar imagens da flora ${id} do R2.`, error);
+          throw new Error(
+            `Falha ao deletar imagens do R2. A operação foi cancelada.`
+          );
+        }
+      }
+
+      // 3. Deletar o registro do banco de dados
+      await tx.flora.delete({
+        where: { id },
+      });
     });
   }
 }

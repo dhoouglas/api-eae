@@ -1,4 +1,8 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectsCommand,
+} from "@aws-sdk/client-s3";
 
 const accountId = process.env.R2_ACCOUNT_ID;
 const accessKeyId = process.env.R2_ACCESS_KEY_ID;
@@ -50,4 +54,49 @@ export async function uploadFileToR2(
     );
     throw error;
   }
+}
+
+export async function deleteMultipleFilesFromR2(fileKeys: string[]) {
+  if (!fileKeys || fileKeys.length === 0) {
+    console.log(
+      "[UPLOAD SERVIÇO] - Nenhuma chave de arquivo fornecida para exclusão."
+    );
+    return;
+  }
+
+  const deleteCommand = new DeleteObjectsCommand({
+    Bucket: bucketName,
+    Delete: {
+      Objects: fileKeys.map((key) => ({ Key: key })),
+      Quiet: false,
+    },
+  });
+
+  try {
+    console.log(
+      `[UPLOAD SERVIÇO] - Enviando comando de exclusão para ${fileKeys.length} arquivos.`
+    );
+    const { Deleted } = await S3.send(deleteCommand);
+    console.log(
+      `[UPLOAD SERVIÇO] - Sucesso ao deletar ${Deleted?.length || 0} arquivos.`
+    );
+
+    if (Deleted?.length !== fileKeys.length) {
+      console.warn(
+        `[UPLOAD SERVIÇO] - Nem todos os arquivos foram deletados com sucesso.`
+      );
+    }
+
+    return Deleted;
+  } catch (error) {
+    console.error("[UPLOAD SERVIÇO] - Erro ao deletar arquivos do R2:", error);
+    throw error;
+  }
+}
+
+export async function deleteFileFromR2(fileKey: string) {
+  console.log(
+    `[UPLOAD SERVIÇO] - Solicitação para deletar arquivo único: ${fileKey}`
+  );
+  return deleteMultipleFilesFromR2([fileKey]);
 }

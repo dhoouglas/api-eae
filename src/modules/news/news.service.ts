@@ -1,3 +1,4 @@
+import { deleteFileFromR2 } from "../upload/upload.service";
 import { pushNotificationService } from "../notifications/push-notification.service";
 import { prisma } from "../../server";
 
@@ -83,7 +84,43 @@ export async function updateNewsPostService(
 
 // DELETE
 export async function deleteNewsPostService(id: string) {
-  await prisma.newsPost.delete({
-    where: { id },
+  return prisma.$transaction(async (tx) => {
+    // 1. Buscar o post para obter a URL da imagem
+    const newsPostToDelete = await tx.newsPost.findUnique({
+      where: { id },
+    });
+
+    if (!newsPostToDelete) {
+      throw new Error(`Notícia com ID ${id} não encontrada.`);
+    }
+
+    // 2. Se houver uma imagem, deletá-la do R2
+    if (newsPostToDelete.imageUrl) {
+      const publicUrlBase = process.env.R2_PUBLIC_URL;
+      if (!publicUrlBase) {
+        throw new Error("A URL pública do R2 não está configurada no .env");
+      }
+      const fileKey = newsPostToDelete.imageUrl.replace(
+        `${publicUrlBase}/`,
+        ""
+      );
+
+      try {
+        await deleteFileFromR2(fileKey);
+      } catch (error) {
+        console.error(
+          `Erro ao deletar a imagem da notícia ${id} do R2.`,
+          error
+        );
+        throw new Error(
+          `Falha ao deletar a imagem do R2. A operação foi cancelada.`
+        );
+      }
+    }
+
+    // 3. Deletar o post do banco de dados
+    await tx.newsPost.delete({
+      where: { id },
+    });
   });
 }

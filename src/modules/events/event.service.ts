@@ -1,3 +1,4 @@
+import { deleteFileFromR2 } from "../upload/upload.service";
 import { pushNotificationService } from "../notifications/push-notification.service";
 import { prisma } from "../../server";
 import { z } from "zod";
@@ -83,7 +84,37 @@ export async function updateEventService(id: string, input: UpdateEventInput) {
 }
 
 export async function deleteEventService(id: string) {
-  await prisma.event.delete({ where: { id } });
+  return prisma.$transaction(async (tx) => {
+    // 1. Buscar o evento para obter a URL da imagem
+    const eventToDelete = await tx.event.findUnique({
+      where: { id },
+    });
+
+    if (!eventToDelete) {
+      throw new Error(`Evento com ID ${id} não encontrado.`);
+    }
+
+    // 2. Se houver uma imagem, deletá-la do R2
+    if (eventToDelete.imageUrl) {
+      const publicUrlBase = process.env.R2_PUBLIC_URL;
+      if (!publicUrlBase) {
+        throw new Error("A URL pública do R2 não está configurada no .env");
+      }
+      const fileKey = eventToDelete.imageUrl.replace(`${publicUrlBase}/`, "");
+
+      try {
+        await deleteFileFromR2(fileKey);
+      } catch (error) {
+        console.error(`Erro ao deletar a imagem do evento ${id} do R2.`, error);
+        throw new Error(
+          `Falha ao deletar a imagem do R2. A operação foi cancelada.`
+        );
+      }
+    }
+
+    // 3. Deletar o evento do banco de dados
+    await tx.event.delete({ where: { id } });
+  });
 }
 
 export async function getAttendanceStatusService(
