@@ -10,7 +10,7 @@ import { floraRoutes } from "./modules/flora/flora.routes";
 import { trailRoutes } from "./modules/trails/trail.routes";
 import { trailCoordinateRoutes } from "./modules/trail-coordinates/trail-coordinate.routes";
 import { trailWaypointRoutes } from "./modules/trail-waypoints/trail-waypoint.routes";
-import notificationRoutes from "./modules/notifications/notification.routes";
+import { notificationRoutes } from "./modules/notifications/notification.routes";
 import { uploadRoutes } from "./modules/upload/upload.routes";
 import multipart from "@fastify/multipart";
 import cors from "@fastify/cors";
