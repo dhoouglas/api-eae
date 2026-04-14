@@ -61,7 +61,12 @@ export async function uploadRoutes(app: FastifyInstance) {
       );
 
       return reply.status(201).send({ url: fileUrl });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.code === "FST_REQ_FILE_TOO_LARGE") {
+        console.error("[UPLOAD ROTA] - ERRO: Arquivo excede o limite de 5MB.");
+        return reply.status(413).send({ error: "O tamanho do arquivo excede o limite de 5MB." });
+      }
+      
       // Este log irá capturar o erro exato, seja do Fastify ou do nosso serviço
       console.error("[UPLOAD ROTA] - ERRO FATAL no bloco try/catch:", error);
       return reply.status(500).send({ error: "Falha no upload do arquivo." });

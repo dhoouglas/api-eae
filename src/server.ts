@@ -26,7 +26,7 @@ app.register(cors, {
 
 app.register(multipart, {
   limits: {
-    fileSize: 3 * 1024 * 1024, // Limite de 3 MB para o tamanho do arquivo
+    fileSize: 5 * 1024 * 1024, // Limite de 5 MB para o tamanho do arquivo
   },
 });
 
@@ -71,10 +71,16 @@ app.register(notificationRoutes, {
 
 async function start() {
   try {
+    // Teste de conexão com o banco de dados
+    console.log("🔄 Verificando conexão com o banco de dados...");
+    await prisma.$queryRaw`SELECT 1`;
+    console.log("✅ Conexão com o banco de dados estabelecida com sucesso!");
+
     const port = Number(process.env.PORT) || 3333;
     await app.listen({ port, host: "0.0.0.0" });
     console.log(`🚀 Servidor HTTP rodando em http://localhost:${port}`);
   } catch (err) {
+    console.error("❌ Erro fatal durante a inicialização:", err);
     app.log.error(err);
     process.exit(1);
   }
