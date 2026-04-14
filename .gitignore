@@ -39,3 +39,6 @@ pids/
 
 # Testing
 /coverage
+
+# Agent
+.gemini.md
