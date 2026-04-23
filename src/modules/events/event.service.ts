@@ -67,6 +67,16 @@ export async function createEventService(input: CreateEventInput) {
         `Não perca: ${newEvent.title}`
       );
     }
+    // Salvar no inbox independente de ter token push
+    await prisma.notification.create({
+      data: {
+        title: "Novo Evento!",
+        message: `Não perca: ${newEvent.title}`,
+        category: "EVENTO",
+        entityId: newEvent.id,
+        userId: user.id,
+      },
+    });
   }
 
   return newEvent;
