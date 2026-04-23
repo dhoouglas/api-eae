@@ -13,4 +13,13 @@ export async function notificationRoutes(app: FastifyInstance) {
   app.put("/users/notification-preferences", (req, reply) =>
     notificationController.updateNotificationPreferences(req, reply)
   );
+  app.post("/send-general", (req, reply) =>
+    notificationController.sendGeneralNotification(req, reply)
+  );
+  app.get("/inbox", (req, reply) =>
+    notificationController.getInbox(req, reply)
+  );
+  app.patch("/inbox/:id/read", (req, reply) =>
+    notificationController.markAsRead(req as any, reply)
+  );
 }
