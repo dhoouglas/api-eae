@@ -27,24 +27,33 @@ cron.schedule("0 9 * * *", async () => {
         status: "CONFIRMED",
         user: {
           notifyOnEventReminders: true,
-          pushToken: {
-            not: null,
-          },
+          pushToken: { not: null },
         },
       },
-      include: {
-        user: true,
-      },
+      include: { user: true },
     });
 
     for (const attendance of attendees) {
+      const notifTitle = "Lembrete de Evento";
+      const notifMessage = `Não se esqueça! O evento "${event.title}" é amanhã.`;
+
       if (attendance.user.pushToken) {
         pushNotificationService.sendPushNotification(
           attendance.user.pushToken,
-          "Lembrete de Evento",
-          `Não se esqueça! O evento "${event.title}" é amanhã.`
+          notifTitle,
+          notifMessage
         );
       }
+
+      // Salvar no inbox do voluntário
+      await prisma.notification.create({
+        data: {
+          title: notifTitle,
+          message: notifMessage,
+          category: "LEMBRETE",
+          userId: attendance.user.id,
+        },
+      });
     }
   }
 });
