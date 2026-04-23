@@ -18,8 +18,8 @@ model User {
   notifyOnEventReminders Boolean  @default(true)
   notifyOnNews           Boolean  @default(true)
 
-  // ...
-  attendances EventAttendance[]
+  attendances   EventAttendance[]
+  notifications Notification[]
 }
 
 model Event {
@@ -63,6 +63,22 @@ model NewsPost {
   updatedAt DateTime @updatedAt
 
   @@map("news_posts")
+}
+
+model Notification {
+  id       String   @id @default(uuid())
+  title    String
+  message  String
+  category String   // "GERAL", "EVENTO", "LEMBRETE"
+  read     Boolean  @default(false)
+  entityId String?  // ID do evento ou entidade relacionada
+
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
 }
 
 model Fauna {
