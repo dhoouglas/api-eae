@@ -2,10 +2,29 @@ import { prisma } from "../../server";
 
 export class NotificationService {
   async updatePushToken(userId: string, pushToken: string) {
-    return prisma.user.update({
-      where: { clerkId: userId },
-      data: { pushToken },
-    });
+    try {
+      if (pushToken) {
+        // Remove token from other users first to prevent Unique constraint failed (P2002)
+        await prisma.user.updateMany({
+          where: {
+            pushToken,
+            clerkId: { not: userId },
+          },
+          data: { pushToken: null },
+        });
+      }
+
+      return await prisma.user.update({
+        where: { clerkId: userId },
+        data: { pushToken },
+      });
+    } catch (error: any) {
+      if (error.code === 'P2025') {
+        console.warn(`User ${userId} not found yet for push token update. Ignoring.`);
+        return null;
+      }
+      throw error;
+    }
   }
 
   async updateNotificationPreferences(
@@ -38,7 +57,10 @@ export class NotificationService {
 
   async getInboxNotifications(clerkId: string) {
     const user = await prisma.user.findUnique({ where: { clerkId } });
-    if (!user) throw new Error("User not found");
+    if (!user) {
+      console.warn(`User ${clerkId} not found. Returning empty inbox.`);
+      return [];
+    }
 
     return prisma.notification.findMany({
       where: { userId: user.id },
@@ -106,7 +128,7 @@ export class NotificationService {
     const original = await prisma.notification.findUnique({
       where: { id: notificationId }
     });
-    
+
     if (!original) throw new Error("Notification not found");
 
     const result = await prisma.notification.deleteMany({
