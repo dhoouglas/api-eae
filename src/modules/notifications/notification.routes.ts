@@ -22,4 +22,10 @@ export async function notificationRoutes(app: FastifyInstance) {
   app.patch("/inbox/:id/read", (req, reply) =>
     notificationController.markAsRead(req as any, reply)
   );
+  app.delete("/inbox/:id", (req, reply) =>
+    notificationController.deleteInboxNotification(req as any, reply)
+  );
+  app.delete("/admin/inbox/:id", (req, reply) =>
+    notificationController.deleteGlobalNotification(req as any, reply)
+  );
 }

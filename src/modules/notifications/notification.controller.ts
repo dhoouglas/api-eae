@@ -98,4 +98,32 @@ export class NotificationController {
       return reply.status(500).send({ error: "Erro ao marcar como lida" });
     }
   }
+
+  async deleteInboxNotification(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const { userId } = req.auth;
+    if (!userId) return reply.status(401).send({ error: "Unauthorized" });
+
+    try {
+      await notificationService.deleteInboxNotification(userId, req.params.id);
+      return reply.status(204).send();
+    } catch (error) {
+      console.error(error);
+      return reply.status(500).send({ error: "Erro ao deletar notificação" });
+    }
+  }
+
+  async deleteGlobalNotification(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const auth = (req as any).auth;
+    if (auth?.sessionClaims?.public_metadata?.role !== "admin") {
+      return reply.status(403).send({ error: "Acesso negado." });
+    }
+
+    try {
+      await notificationService.deleteGlobalNotification(req.params.id);
+      return reply.status(204).send();
+    } catch (error) {
+      console.error(error);
+      return reply.status(500).send({ error: "Erro ao deletar notificação globalmente" });
+    }
+  }
 }

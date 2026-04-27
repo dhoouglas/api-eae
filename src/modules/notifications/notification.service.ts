@@ -92,6 +92,33 @@ export class NotificationService {
 
     return usersToNotify.length;
   }
+
+  async deleteInboxNotification(clerkId: string, notificationId: string) {
+    const user = await prisma.user.findUnique({ where: { clerkId } });
+    if (!user) throw new Error("User not found");
+
+    return prisma.notification.delete({
+      where: { id: notificationId, userId: user.id },
+    });
+  }
+
+  async deleteGlobalNotification(notificationId: string) {
+    const original = await prisma.notification.findUnique({
+      where: { id: notificationId }
+    });
+    
+    if (!original) throw new Error("Notification not found");
+
+    const result = await prisma.notification.deleteMany({
+      where: {
+        title: original.title,
+        message: original.message,
+        category: original.category,
+      }
+    });
+
+    return result.count;
+  }
 }
 
 export const notificationService = new NotificationService();
