@@ -1,25 +1,26 @@
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id        String   @id @default(uuid())
-  clerkId   String   @unique
-  
-  pushToken String?  @unique
-  notifyOnNewEvents      Boolean  @default(true)
-  notifyOnEventReminders Boolean  @default(true)
-  notifyOnNews           Boolean  @default(true)
+  id      String @id @default(uuid())
+  clerkId String @unique
 
-  attendances   EventAttendance[]
-  notifications Notification[]
+  pushToken              String? @unique
+  notifyOnNewEvents      Boolean @default(true)
+  notifyOnEventReminders Boolean @default(true)
+  notifyOnNews           Boolean @default(true)
+
+  attendances      EventAttendance[]
+  notifications    Notification[]
+  comments         Comment[]
+  commentReactions CommentReaction[]
 }
 
 model Event {
@@ -28,20 +29,21 @@ model Event {
   description String
   date        DateTime
   location    String
-  imageUrl    String?  
+  imageUrl    String?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  attendees   EventAttendance[]
+  attendees EventAttendance[]
+  comments  Comment[]
 
   @@map("events")
 }
 
 model EventAttendance {
-  userId    String
-  eventId   String
-  status    String
+  userId  String
+  eventId String
+  status  String
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -53,28 +55,30 @@ model EventAttendance {
 }
 
 model NewsPost {
-  id        String   @id @default(uuid())
-  title     String
-  content   String   @db.Text // @db.Text é ideal para textos mais longos
-  category  String   // Ex: "CONSERVAÇÃO", "EDUCAÇÃO", "EVENTO"
-  imageUrl  String?  // A imagem da notícia será opcional
+  id       String  @id @default(uuid())
+  title    String
+  content  String  @db.Text // @db.Text é ideal para textos mais longos
+  category String // Ex: "CONSERVAÇÃO", "EDUCAÇÃO", "EVENTO"
+  imageUrl String? // A imagem da notícia será opcional
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  comments Comment[]
 
   @@map("news_posts")
 }
 
 model Notification {
-  id       String   @id @default(uuid())
+  id       String  @id @default(uuid())
   title    String
   message  String
-  category String   // "GERAL", "EVENTO", "LEMBRETE"
-  read     Boolean  @default(false)
-  entityId String?  // ID do evento ou entidade relacionada
+  category String // "GERAL", "EVENTO", "LEMBRETE"
+  read     Boolean @default(false)
+  entityId String? // ID do evento ou entidade relacionada
 
-  userId   String
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -82,13 +86,13 @@ model Notification {
 }
 
 model Fauna {
-  id        String   @id @default(uuid())
-  name      String
-  scientificName String
-  description String @db.Text
-  habitat   String
+  id                 String   @id @default(uuid())
+  name               String
+  scientificName     String
+  description        String   @db.Text
+  habitat            String
   conservationStatus String
-  imageUrls  String[]
+  imageUrls          String[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -97,13 +101,13 @@ model Fauna {
 }
 
 model Flora {
-  id        String   @id @default(uuid())
-  name      String
-  scientificName String
-  description String @db.Text
-  family    String
+  id                 String   @id @default(uuid())
+  name               String
+  scientificName     String
+  description        String   @db.Text
+  family             String
   conservationStatus String
-  imageUrls  String[]
+  imageUrls          String[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -130,54 +134,100 @@ enum TrailType {
 }
 
 model Trail {
-  id              String   @id @default(uuid())
-  name            String
-  description     String   @db.Text
-  distance        Float
-  difficulty      TrailDifficulty
-  estimatedTime   Int // in minutes
-  imageUrls       String[]
-  status          TrailStatus @default(ABERTA)
-  type            TrailType
-  elevationGain   Float
+  id            String          @id @default(uuid())
+  name          String
+  description   String          @db.Text
+  distance      Float
+  difficulty    TrailDifficulty
+  estimatedTime Int // in minutes
+  imageUrls     String[]
+  status        TrailStatus     @default(ABERTA)
+  type          TrailType
+  elevationGain Float
 
-  coordinates     TrailCoordinate[]
-  waypoints       TrailWaypoint[]
+  coordinates TrailCoordinate[]
+  waypoints   TrailWaypoint[]
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("trails")
 }
 
 model TrailCoordinate {
-  id        String   @id @default(uuid())
+  id        String @id @default(uuid())
   latitude  Float
   longitude Float
   order     Int
 
-  trail     Trail    @relation(fields: [trailId], references: [id], onDelete: Cascade)
-  trailId   String
+  trail   Trail  @relation(fields: [trailId], references: [id], onDelete: Cascade)
+  trailId String
 
-  waypoint  TrailWaypoint?
+  waypoint TrailWaypoint?
 
   @@map("trail_coordinates")
 }
 
 model TrailWaypoint {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   name        String
-  description String?  @db.Text
+  description String? @db.Text
   imageUrl    String?
 
-  trail       Trail    @relation(fields: [trailId], references: [id], onDelete: Cascade)
-  trailId     String
+  trail   Trail  @relation(fields: [trailId], references: [id], onDelete: Cascade)
+  trailId String
 
   coordinate   TrailCoordinate @relation(fields: [coordinateId], references: [id], onDelete: Cascade)
   coordinateId String          @unique
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("trail_waypoints")
+}
+
+enum ReactionType {
+  LIKE
+  DISLIKE
+}
+
+model Comment {
+  id      String @id @default(uuid())
+  content String // Text limited by API logic
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  eventId String?
+  event   Event?  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  newsId String?
+  news   NewsPost? @relation(fields: [newsId], references: [id], onDelete: Cascade)
+
+  isReported  Boolean @default(false)
+  reportCount Int     @default(0)
+  isEdited    Boolean @default(false)
+
+  reactions CommentReaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("comments")
+}
+
+model CommentReaction {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  commentId String
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  type ReactionType
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, commentId])
+  @@map("comment_reactions")
 }

@@ -12,6 +12,7 @@ import { trailCoordinateRoutes } from "./modules/trail-coordinates/trail-coordin
 import { trailWaypointRoutes } from "./modules/trail-waypoints/trail-waypoint.routes";
 import { notificationRoutes } from "./modules/notifications/notification.routes";
 import { uploadRoutes } from "./modules/upload/upload.routes";
+import { commentRoutes } from "./modules/comments/comment.routes";
 import multipart from "@fastify/multipart";
 import cors from "@fastify/cors";
 import "./cron";
@@ -68,6 +69,8 @@ app.register(trailWaypointRoutes);
 app.register(notificationRoutes, {
   prefix: "/notifications",
 });
+
+app.register(commentRoutes, { prefix: "/comments" });
 
 async function start() {
   try {
