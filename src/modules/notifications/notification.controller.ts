@@ -24,7 +24,13 @@ export class NotificationController {
 
     try {
       const { pushToken } = bodySchema.parse(req.body);
-      await notificationService.updatePushToken(userId, pushToken);
+      const result = await notificationService.updatePushToken(userId, pushToken);
+
+      // P2025: user not yet synced in DB (Clerk webhook delay) — ask client to retry
+      if (result === null) {
+        return reply.status(404).send({ error: "User not found. Push token not saved. Please retry." });
+      }
+
       return reply.status(204).send();
     } catch (error) {
       console.error(error);

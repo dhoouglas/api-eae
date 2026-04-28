@@ -94,10 +94,10 @@ export class NotificationService {
       usersToNotify.map(async (user) => {
         const promises: Promise<any>[] = [];
 
-        // Enviar push
+        // Enviar push (forward clerkId so stale-token cleanup is scoped to the owner)
         if (user.pushToken) {
           promises.push(
-            pushNotificationService.sendPushNotification(user.pushToken, title, body)
+            pushNotificationService.sendPushNotification(user.pushToken, title, body, user.clerkId)
           );
         }
 

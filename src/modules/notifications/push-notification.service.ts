@@ -4,7 +4,7 @@ import { prisma } from "../../server";
 const expo = new Expo();
 
 class PushNotificationService {
-  async sendPushNotification(pushToken: string, title: string, body: string) {
+  async sendPushNotification(pushToken: string, title: string, body: string, ownerClerkId?: string) {
     if (!Expo.isExpoPushToken(pushToken)) {
       console.error(`Push token ${pushToken} is not a valid Expo push token`);
       return;
@@ -24,9 +24,9 @@ class PushNotificationService {
       for (const ticket of tickets) {
         if (ticket.status === "error") {
           console.error("❌ Expo Push Error:", ticket.message, "| Details:", JSON.stringify(ticket.details));
-          // DeviceNotRegistered means the token is stale — clear it immediately from DB
+          // DeviceNotRegistered means the token is stale — clear it from DB (scoped to owner)
           if ((ticket.details as any)?.error === "DeviceNotRegistered") {
-            await this.clearStaleToken(pushToken);
+            await this.clearStaleToken(pushToken, ownerClerkId);
           }
         } else {
           console.log("✅ Expo push ticket OK:", ticket.id);
@@ -43,13 +43,17 @@ class PushNotificationService {
     }
   }
 
-  private async clearStaleToken(pushToken: string) {
+  private async clearStaleToken(pushToken: string, ownerClerkId?: string) {
     try {
+      // If we know the owner, scope the cleanup — never touch other users' tokens
       await prisma.user.updateMany({
-        where: { pushToken },
+        where: {
+          pushToken,
+          ...(ownerClerkId ? { clerkId: ownerClerkId } : {}),
+        },
         data: { pushToken: null },
       });
-      console.warn(`🗑️ Token inválido removido do banco: ${pushToken}`);
+      console.warn(`🗑️ Token inválido removido do banco: ${pushToken} (owner: ${ownerClerkId ?? "unknown"})`);
     } catch (err) {
       console.error("Erro ao limpar token inválido:", err);
     }
