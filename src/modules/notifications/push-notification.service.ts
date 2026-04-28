@@ -1,4 +1,5 @@
 import Expo from "expo-server-sdk";
+import { prisma } from "../../server";
 
 const expo = new Expo();
 
@@ -23,6 +24,10 @@ class PushNotificationService {
       for (const ticket of tickets) {
         if (ticket.status === "error") {
           console.error("❌ Expo Push Error:", ticket.message, "| Details:", JSON.stringify(ticket.details));
+          // DeviceNotRegistered means the token is stale — clear it immediately from DB
+          if ((ticket.details as any)?.error === "DeviceNotRegistered") {
+            await this.clearStaleToken(pushToken);
+          }
         } else {
           console.log("✅ Expo push ticket OK:", ticket.id);
           receiptIds.push(ticket.id);
@@ -38,6 +43,18 @@ class PushNotificationService {
     }
   }
 
+  private async clearStaleToken(pushToken: string) {
+    try {
+      await prisma.user.updateMany({
+        where: { pushToken },
+        data: { pushToken: null },
+      });
+      console.warn(`🗑️ Token inválido removido do banco: ${pushToken}`);
+    } catch (err) {
+      console.error("Erro ao limpar token inválido:", err);
+    }
+  }
+
   private async checkReceipts(receiptIds: string[]) {
     try {
       const receiptIdChunks = expo.chunkPushNotificationReceiptIds(receiptIds);
@@ -48,6 +65,9 @@ class PushNotificationService {
             console.log(`📬 Receipt OK [${id}]: entregue ao dispositivo`);
           } else {
             console.error(`📭 Receipt ERROR [${id}]:`, receipt.message, "| Details:", JSON.stringify(receipt.details));
+            if ((receipt.details as any)?.error === "DeviceNotRegistered") {
+              console.warn(`⚠️ Receipt [${id}] indica DeviceNotRegistered. Token obsoleto detectado.`);
+            }
           }
         }
       }
