@@ -4,6 +4,7 @@ import {
   TrailCreateData,
   TrailUpdateData,
 } from "./trail.service";
+import { z } from "zod";
 
 const trailService = new TrailService();
 
@@ -61,6 +62,12 @@ export class TrailController {
       const trail = await trailService.update(id, data);
       return reply.status(200).send(trail);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({
+          message: "Dados inválidos.",
+          issues: error.format(),
+        });
+      }
       return reply
         .status(400)
         .send({ message: "Erro ao atualizar trilha", error });

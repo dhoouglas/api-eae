@@ -25,8 +25,8 @@ const trailCreateSchema = z.object({
     .array(
       z.object({
         name: z.string(),
-        description: z.string().optional(),
-        imageUrl: z.string().url().optional(),
+        description: z.string().nullish(),
+        imageUrl: z.string().url().nullish(),
         order: z.number().int(),
       })
     )
@@ -51,17 +51,20 @@ export class TrailService {
         },
       });
 
-      // 2. Criar as coordenadas e mapeá-las pela ordem para fácil acesso
-      const createdCoordinates = await Promise.all(
-        coordinates.map((coord) =>
-          tx.trailCoordinate.create({
-            data: {
-              ...coord,
-              trailId: trail.id,
-            },
-          })
-        )
-      );
+      // 2. Criar as coordenadas (usando createMany)
+      if (coordinates && coordinates.length > 0) {
+        await tx.trailCoordinate.createMany({
+          data: coordinates.map((coord) => ({
+            ...coord,
+            trailId: trail.id,
+          })),
+        });
+      }
+
+      // Para recuperar as coordenadas e vincular aos waypoints, precisamos buscar
+      const createdCoordinates = await tx.trailCoordinate.findMany({
+        where: { trailId: trail.id },
+      });
 
       const coordinatesByOrder = new Map(
         createdCoordinates.map((c) => [c.order, c])
@@ -69,25 +72,27 @@ export class TrailService {
 
       // 3. Se houver waypoints, criá-los e associá-los às coordenadas
       if (waypoints && waypoints.length > 0) {
-        await Promise.all(
-          waypoints.map((wp) => {
-            const coordinate = coordinatesByOrder.get(wp.order);
-            if (!coordinate) {
-              throw new Error(
-                `Coordenada com ordem ${wp.order} não encontrada para o waypoint ${wp.name}.`
-              );
-            }
-            return tx.trailWaypoint.create({
-              data: {
-                name: wp.name,
-                description: wp.description,
-                imageUrl: wp.imageUrl,
-                trailId: trail.id,
-                coordinateId: coordinate.id,
-              },
-            });
-          })
-        );
+        const waypointsDataToCreate = waypoints.map((wp) => {
+          const coordinate = coordinatesByOrder.get(wp.order);
+          if (!coordinate) {
+            throw new Error(
+              `Coordenada com ordem ${wp.order} não encontrada para o waypoint ${wp.name}.`
+            );
+          }
+          return {
+            name: wp.name,
+            description: wp.description,
+            imageUrl: wp.imageUrl,
+            trailId: trail.id,
+            coordinateId: coordinate.id,
+          };
+        });
+
+        if (waypointsDataToCreate.length > 0) {
+          await tx.trailWaypoint.createMany({
+            data: waypointsDataToCreate,
+          });
+        }
       }
 
       // 4. Retornar a trilha completa com todas as suas relações
@@ -142,31 +147,50 @@ export class TrailService {
 
     return prisma.$transaction(async (tx) => {
       // 1. Atualizar os dados principais da trilha
-      await tx.trail.update({
-        where: { id },
-        data: trailData,
-      });
+      if (Object.keys(trailData).length > 0) {
+        await tx.trail.update({
+          where: { id },
+          data: trailData,
+        });
+      }
+
+      // Se vamos atualizar as coordenadas, precisamos ter cuidado com os waypoints antigos
+      // devido ao onDelete: Cascade. Se waypoints não forem passados, devemos preservá-los.
+      let finalWaypoints = waypoints;
 
       // 2. Sincronizar coordenadas (Abordagem: deletar e recriar)
       if (coordinates) {
-        // Deletar coordenadas antigas
+        // Se formos preservar os waypoints antigos, buscamos as ordens deles
+        if (!waypoints) {
+           const currentWaypointsWithOrder = await tx.trailWaypoint.findMany({
+             where: { trailId: id },
+             include: { coordinate: true }
+           });
+           finalWaypoints = currentWaypointsWithOrder.map(wp => ({
+             name: wp.name,
+             description: wp.description,
+             imageUrl: wp.imageUrl,
+             order: wp.coordinate.order
+           }));
+        }
+
+        // Deletar coordenadas antigas (Isso apagará em cascata os waypoints antigos no DB)
         await tx.trailCoordinate.deleteMany({ where: { trailId: id } });
-        // Criar novas coordenadas
-        await Promise.all(
-          coordinates.map((coord) =>
-            tx.trailCoordinate.create({
-              data: { ...coord, trailId: id },
-            })
-          )
-        );
+        // Criar novas coordenadas (Usando createMany para não sobrecarregar a transação - P2028)
+        await tx.trailCoordinate.createMany({
+          data: coordinates.map((coord) => ({ ...coord, trailId: id })),
+        });
       }
 
-      // 3. Sincronizar waypoints (Abordagem: deletar e recriar)
-      if (waypoints) {
-        // Deletar waypoints antigos
-        await tx.trailWaypoint.deleteMany({ where: { trailId: id } });
+      // 3. Sincronizar waypoints
+      if (finalWaypoints) {
+        // Se as coordenadas não foram recriadas neste request, os waypoints antigos ainda existem
+        // Então deletamos para recriar (evitando duplicatas)
+        if (!coordinates) {
+          await tx.trailWaypoint.deleteMany({ where: { trailId: id } });
+        }
 
-        // Pegar as coordenadas recém-criadas ou as existentes
+        // Pegar as coordenadas (sejam as recém-criadas ou as existentes)
         const currentCoordinates = await tx.trailCoordinate.findMany({
           where: { trailId: id },
         });
@@ -175,25 +199,27 @@ export class TrailService {
         );
 
         // Criar novos waypoints
-        await Promise.all(
-          waypoints.map((wp) => {
-            const coordinate = coordinatesByOrder.get(wp.order);
-            if (!coordinate) {
-              throw new Error(
-                `Coordenada com ordem ${wp.order} não encontrada para o waypoint ${wp.name} durante a atualização.`
-              );
-            }
-            return tx.trailWaypoint.create({
-              data: {
-                name: wp.name,
-                description: wp.description,
-                imageUrl: wp.imageUrl,
-                trailId: id,
-                coordinateId: coordinate.id,
-              },
-            });
-          })
-        );
+        const waypointsDataToCreate = finalWaypoints.map((wp) => {
+          const coordinate = coordinatesByOrder.get(wp.order);
+          if (!coordinate) {
+            throw new Error(
+              `Coordenada com ordem ${wp.order} não encontrada para o waypoint ${wp.name} durante a atualização.`
+            );
+          }
+          return {
+            name: wp.name,
+            description: wp.description,
+            imageUrl: wp.imageUrl,
+            trailId: id,
+            coordinateId: coordinate.id,
+          };
+        });
+
+        if (waypointsDataToCreate.length > 0) {
+          await tx.trailWaypoint.createMany({
+            data: waypointsDataToCreate,
+          });
+        }
       }
 
       // 4. Retornar a trilha completa e atualizada

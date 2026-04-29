@@ -14,6 +14,8 @@ const createFloraSchema = z.object({
     .max(3, { message: "É permitido enviar no máximo 3 imagens." }),
 });
 
+const updateFloraSchema = createFloraSchema.partial();
+
 class FloraController {
   async create(request: FastifyRequest, reply: FastifyReply) {
     if (
@@ -70,9 +72,16 @@ class FloraController {
     }
     try {
       const { id } = request.params as { id: string };
-      const flora = await FloraService.update(id, request.body as any);
+      const data = updateFloraSchema.parse(request.body);
+      const flora = await FloraService.update(id, data);
       reply.send(flora);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.code(400).send({
+          error: "Dados inválidos.",
+          issues: error.format(),
+        });
+      }
       reply.code(500).send({ error: "Internal Server Error" });
     }
   }
